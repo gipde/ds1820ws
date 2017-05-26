@@ -1,3 +1,4 @@
+
 # Binaries for programs and plugins
 *.exe
 *.dll
@@ -16,3 +17,6 @@ my.db
 
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
+
+ds1820ws
+debug
