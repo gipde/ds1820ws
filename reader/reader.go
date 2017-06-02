@@ -53,6 +53,11 @@ func init() {
 
 func main() {
 
+	if len(flag.Args()) <= 1 {
+		flag.PrintDefaults()
+		log.Fatal("Keine Argumente angegeben")
+	}
+
 	sensorDirs, err := ioutil.ReadDir(baseDir)
 	if err != nil {
 		log.Fatal(err)
