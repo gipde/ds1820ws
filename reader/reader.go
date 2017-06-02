@@ -29,10 +29,15 @@ func readSensorFile(f string) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+
 	scanner.Scan() // 1. Line
-	fmt.Println(scanner.Text())
+	if v, _ := regexp.MatchString(".*YES", scanner.Text()); !v {
+		log.Fatal("CRC failed")
+	}
 	scanner.Scan() // 2. Line
-	fmt.Println(scanner.Text())
+	re, _ := regexp.Compile(".*t=(\\d*))")
+	matches := re.FindAllString(scanner.Text(), 1)
+	fmt.Println(matches)
 
 }
 
@@ -89,7 +94,7 @@ func main() {
 
 	var sensors []string
 	for _, f := range sensorDirs {
-		if m, _ := regexp.Match("\\d{2}-[0-9a-z]{12}", []byte(f.Name())); m {
+		if m, _ := regexp.Match("10-[0-9a-z]{12}", []byte(f.Name())); m {
 			sensors = append(sensors, f.Name())
 		}
 	}
