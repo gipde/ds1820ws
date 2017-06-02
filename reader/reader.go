@@ -2,30 +2,42 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 )
 
-/*
-TODO:
-- Commandline Parser
-	- list all Sensors
-	- Transmit all Sensors
-*/
-
 const baseDir = "/sys/bus/w1/devices"
+const url = "http://localhost/sensor/"
+const user = "foo"
+const pass = "bar"
 
 var list, transmit *bool
+
+// SensorData Temperature
+type SensorData struct {
+	SensorName string `json:"name"`
+	Value      string `json:"value"`
+}
+
+func init() {
+	list = flag.Bool("list", false, "list sensors")
+	transmit = flag.Bool("transmit", false, "Transmit sensors")
+	flag.Usage = usage
+	flag.Parse()
+}
 
 func readSensorFile(f string) string {
 	file, err := os.Open(baseDir + "/" + f + "/w1_slave")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer file.Close()
 
@@ -50,42 +62,29 @@ func readSensorFile(f string) string {
 }
 
 func doTransmit(name string) {
+	jsonStr, _ := json.Marshal(SensorData{name, readSensorFile(name)})
+	fmt.Printf("Transmitting: %s\n", jsonStr)
+	req, _ := http.NewRequest("POST", url+"/"+name, bytes.NewBuffer(jsonStr))
+	req.SetBasicAuth(user, pass)
+	req.Header.Set("Content-Type", "application/json")
 
-	// Get Value
-	fmt.Println(readSensorFile(name))
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 
-	// fmt.Printf("We Transmit value of %s\n", name)
-
-	// url := "http://restapi3.apiary.io/notes"
-	// fmt.Println("URL:>", url)
-
-	// var jsonStr = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
-	// req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	// req.Header.Set("Content-Type", "application/json")
-
-	// client := &http.Client{}
-	// resp, err := client.Do(req)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer resp.Body.Close()
-
-	// fmt.Println("response Status:", resp.Status)
-	// fmt.Println("response Headers:", resp.Header)
-	// body, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println("response Body:", string(body))
+	fmt.Println("response Status:", resp.Status)
+	fmt.Println("response Headers:", resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("response Body:", string(body))
 }
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "keine Argumente:\nUsage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
-}
-func init() {
-	list = flag.Bool("list", false, "list sensors")
-	transmit = flag.Bool("transmit", false, "Transmit sensors")
-	flag.Usage = usage
-	flag.Parse()
 }
 
 func main() {
