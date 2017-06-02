@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 /*
@@ -21,7 +22,7 @@ const baseDir = "/sys/bus/w1/devices"
 
 var list, transmit *bool
 
-func readSensorFile(f string) {
+func readSensorFile(f string) string {
 	file, err := os.Open(baseDir + "/" + f + "/w1_slave")
 	if err != nil {
 		log.Fatal(err)
@@ -35,16 +36,23 @@ func readSensorFile(f string) {
 		log.Fatal("CRC failed")
 	}
 	scanner.Scan() // 2. Line
-	re, _ := regexp.Compile(".*t=(\\d*))")
-	matches := re.FindAllString(scanner.Text(), 1)
-	fmt.Println(matches)
+	re := regexp.MustCompile(".*t=(\\d))")
+	matches := re.FindStringSubmatch(scanner.Text())
+
+	var retval = "INVALID"
+
+	if len(matches) == 2 {
+		tempInt, _ := strconv.Atoi(matches[1])
+		retval = strconv.FormatFloat(float64(tempInt)/100, 'f', 2, 32)
+	}
+	return retval
 
 }
 
 func doTransmit(name string) {
 
 	// Get Value
-	readSensorFile(name)
+	fmt.Println(readSensorFile(name))
 
 	// fmt.Printf("We Transmit value of %s\n", name)
 
