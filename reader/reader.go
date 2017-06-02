@@ -36,14 +36,14 @@ func readSensorFile(f string) string {
 		log.Fatal("CRC failed")
 	}
 	scanner.Scan() // 2. Line
-	re := regexp.MustCompile(".*t=(\\d))")
+	re := regexp.MustCompile(".*t=(\\d*)")
 	matches := re.FindStringSubmatch(scanner.Text())
 
 	var retval = "INVALID"
 
 	if len(matches) == 2 {
 		tempInt, _ := strconv.Atoi(matches[1])
-		retval = strconv.FormatFloat(float64(tempInt)/100, 'f', 2, 32)
+		retval = strconv.FormatFloat(float64(tempInt)/1000, 'f', 2, 32)
 	}
 	return retval
 
