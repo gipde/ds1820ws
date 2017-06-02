@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"regexp"
 )
@@ -22,40 +21,65 @@ const baseDir = "/sys/bus/w1/devices"
 
 var list, transmit *bool
 
-func doTransmit(name string) {
-	fmt.Printf("We Transmit value of %s\n", name)
-
-	url := "http://restapi3.apiary.io/notes"
-	fmt.Println("URL:>", url)
-
-	var jsonStr = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+func readSensorFile(f string) {
+	file, err := os.Open(baseDir + "/" + f + "/w1_slave")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer file.Close()
 
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("response Body:", string(body))
+	scanner := bufio.NewScanner(file)
+	scanner.Scan() // 1. Line
+	fmt.Println(scanner.Text())
+	scanner.Scan() // 2. Line
+	fmt.Println(scanner.Text())
+
 }
 
+func doTransmit(name string) {
+
+	// Get Value
+	readSensorFile(name)
+
+	// fmt.Printf("We Transmit value of %s\n", name)
+
+	// url := "http://restapi3.apiary.io/notes"
+	// fmt.Println("URL:>", url)
+
+	// var jsonStr = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
+	// req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	// req.Header.Set("Content-Type", "application/json")
+
+	// client := &http.Client{}
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer resp.Body.Close()
+
+	// fmt.Println("response Status:", resp.Status)
+	// fmt.Println("response Headers:", resp.Header)
+	// body, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println("response Body:", string(body))
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "keine Argumente:\nUsage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
+	os.Exit(1)
+}
 func init() {
 	list = flag.Bool("list", false, "list sensors")
 	transmit = flag.Bool("transmit", false, "Transmit sensors")
+	flag.Usage = usage
 	flag.Parse()
 }
 
 func main() {
 
-	if len(flag.Args()) <= 1 {
-		flag.PrintDefaults()
-		log.Fatal("Keine Argumente angegeben")
+	//	fmt.Println(len(os.Args))
+	if len(os.Args) <= 1 {
+		usage()
 	}
 
 	sensorDirs, err := ioutil.ReadDir(baseDir)
@@ -69,8 +93,6 @@ func main() {
 			sensors = append(sensors, f.Name())
 		}
 	}
-
-	fmt.Println(os.Args)
 
 	for _, n := range sensors {
 		if *list {
