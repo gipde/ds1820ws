@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +27,8 @@ func handlCtrlC() {
 
 func main() {
 	handlCtrlC()
+
+	log.Println("Listening on :8080")
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()

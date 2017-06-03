@@ -8,6 +8,11 @@ import (
 	"gopkg.in/gin-gonic/gin.v1"
 )
 
+// SensorData Temperature
+type SensorUpdateData struct {
+	Value string `json:"value"`
+}
+
 func sensorInfoHandler(c *gin.Context) {
 	/*
 		- Anzahl der Werte
@@ -17,7 +22,6 @@ func sensorInfoHandler(c *gin.Context) {
 		- Maximum der letzten Woche, Monat, Jahr
 		- Avg
 	*/
-	//Ívalues := c.Query("lastvalues")
 	name := c.Param(":sensorname")
 	values := countValues(name)
 	r := gin.H{"message": string(values)}
@@ -31,6 +35,14 @@ func sensorInfoHandler(c *gin.Context) {
 }
 
 func sensorValueHandler(c *gin.Context) {
+	name := c.Param("sensorname")
+	lastvalue := c.Query("lastvalue")
+
+	if lastvalue == "true" {
+		date, value := getLastValues(name)
+		r := gin.H{"date": date, "value": value}
+		c.JSON(200, r)
+	}
 	/*
 		Zeitraumabfrage der Werte
 	*/
@@ -40,18 +52,12 @@ func sensorValueHandler(c *gin.Context) {
 
 }
 
-// SensorData Temperature
-type SensorData struct {
-	SensorName string `json:"name"`
-	Value      string `json:"value"`
-}
-
 func sensorUpdateHandler(c *gin.Context) {
-	//	save("testsensor", 0.1)
-	var j SensorData
+	var j SensorUpdateData
+	name := c.Param("sensorname")
 	if e := c.Bind(&j); e == nil {
 		value, _ := strconv.ParseFloat(j.Value, 32)
-		save(j.SensorName, float32(value))
+		save(name, float32(value))
 		c.JSON(http.StatusOK, gin.H{"status": j.Value})
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": e})

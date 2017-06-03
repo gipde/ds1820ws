@@ -18,6 +18,10 @@ const dbName = "heating.db"
 
 var db *bolt.DB
 
+func init() {
+	ensureDBOpen()
+}
+
 func ensureDBOpen() {
 	var err error
 	if db == nil {
@@ -51,15 +55,23 @@ func getOrCreateBucket(bucket string, tx *bolt.Tx) *bolt.Bucket {
 }
 
 func save(bucket string, value float32) {
-	ensureDBOpen()
-
 	t := time.Now().Format(time.RFC3339)
-	log.Printf("%s: %s -> %f\n", t, bucket, value)
 
 	db.Update(func(tx *bolt.Tx) error {
 		b := getOrCreateBucket(bucket, tx)
 		return b.Put([]byte(t), float32bytes(value))
 	})
+}
+
+func getLastValues(bucket string) (string, float32) {
+	var value, date []byte
+
+	db.View(func(tx *bolt.Tx) error {
+		c := getOrCreateBucket(bucket, tx).Cursor()
+		date, value = c.Last()
+		return nil
+	})
+	return string(date), float32frombytes(value)
 }
 
 func getValuesBetween(bucket, min, max string) map[string]float32 {

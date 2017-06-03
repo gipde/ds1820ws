@@ -15,21 +15,23 @@ import (
 )
 
 const baseDir = "/sys/bus/w1/devices"
-const url = "http://localhost/sensor/"
 const user = "foo"
 const pass = "bar"
 
 var list, transmit *bool
+var hostname *string
+var port *int
 
 // SensorData Temperature
-type SensorData struct {
-	SensorName string `json:"name"`
-	Value      string `json:"value"`
+type SensorUpdateData struct {
+	Value string `json:"value"`
 }
 
 func init() {
 	list = flag.Bool("list", false, "list sensors")
 	transmit = flag.Bool("transmit", false, "Transmit sensors")
+	hostname = flag.String("host", "76b83848-66ad-479f-becf-603934bcdfaa.pub.cloud.scaleway.com", "hostname")
+	port = flag.Int("port", 8080, "Port")
 	flag.Usage = usage
 	flag.Parse()
 }
@@ -62,9 +64,10 @@ func readSensorFile(f string) string {
 }
 
 func doTransmit(name string) {
-	jsonStr, _ := json.Marshal(SensorData{name, readSensorFile(name)})
-	fmt.Printf("Transmitting: %s\n", jsonStr)
-	req, _ := http.NewRequest("POST", url+"/"+name, bytes.NewBuffer(jsonStr))
+	jsonStr, _ := json.Marshal(SensorUpdateData{readSensorFile(name)})
+	log.Printf("Transmitting: %s\n", jsonStr)
+	url := fmt.Sprintf("http://%s:%d/sensor/", *hostname, *port)
+	req, _ := http.NewRequest("PUT", url+name, bytes.NewBuffer(jsonStr))
 	req.SetBasicAuth(user, pass)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -75,10 +78,15 @@ func doTransmit(name string) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("response Body:", string(body))
+	if resp.Status != "200 OK" {
+		fmt.Println("response Status:", resp.Status)
+		fmt.Println("response Headers:", resp.Header)
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("response Body:", string(body))
+
+		fmt.Println("unexpected Result")
+		os.Exit(1)
+	}
 }
 
 func usage() {
