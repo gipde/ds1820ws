@@ -13,6 +13,11 @@ type SensorUpdateData struct {
 	Value string `json:"value"`
 }
 
+func sensorsHandler(c *gin.Context) {
+	log.Println("Sensors Info")
+	c.JSON(200, getBuckets())
+}
+
 func sensorInfoHandler(c *gin.Context) {
 	/*
 		- Anzahl der Werte
@@ -22,27 +27,15 @@ func sensorInfoHandler(c *gin.Context) {
 		- Maximum der letzten Woche, Monat, Jahr
 		- Avg
 	*/
-	name := c.Param(":sensorname")
+	name := c.Param("sensorname")
 	values := countValues(name)
-	r := gin.H{"message": string(values)}
+	r := gin.H{"valuecount": strconv.Itoa(values)}
 	log.Println(r)
-	if values >= 0 {
-		log.Println("values: " + string(values))
-		c.JSON(200, r)
-	} else {
-		c.JSON(202, r)
-	}
+	c.JSON(202, r)
 }
 
 func sensorValueHandler(c *gin.Context) {
-	name := c.Param("sensorname")
-	lastvalue := c.Query("lastvalue")
-
-	if lastvalue == "true" {
-		date, value := getLastValues(name)
-		r := gin.H{"date": date, "value": value}
-		c.JSON(200, r)
-	}
+	//name := c.Param("sensorname")
 	/*
 		Zeitraumabfrage der Werte
 	*/
@@ -56,10 +49,24 @@ func sensorUpdateHandler(c *gin.Context) {
 	var j SensorUpdateData
 	name := c.Param("sensorname")
 	if e := c.Bind(&j); e == nil {
+		log.Print("Data")
+		log.Println(j)
 		value, _ := strconv.ParseFloat(j.Value, 32)
 		save(name, float32(value))
 		c.JSON(http.StatusOK, gin.H{"status": j.Value})
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": e})
+	}
+}
+
+func sensorLastValueHandler(c *gin.Context) {
+	name := c.Param("sensorname")
+	count := c.Query("count")
+	if count != "" {
+		countval, _ := strconv.Atoi(count)
+		c.JSON(http.StatusOK, getNLastValues(name, countval))
+	} else {
+		r := getNLastValues(name, 1)[0]
+		c.JSON(http.StatusOK, r)
 	}
 }

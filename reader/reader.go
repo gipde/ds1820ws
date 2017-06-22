@@ -60,7 +60,6 @@ func readSensorFile(f string) string {
 		retval = strconv.FormatFloat(float64(tempInt)/1000, 'f', 2, 32)
 	}
 	return retval
-
 }
 
 func doTransmit(name string) {
@@ -97,7 +96,6 @@ func usage() {
 
 func main() {
 
-	//	fmt.Println(len(os.Args))
 	if len(os.Args) <= 1 {
 		usage()
 	}

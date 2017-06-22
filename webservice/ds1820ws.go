@@ -36,9 +36,11 @@ func main() {
 	//every call needs to be authenticated
 	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{user: pass}))
 
+	authorized.GET("/sensors", sensorsHandler)
 	authorized.GET("/sensor/:sensorname/info", sensorInfoHandler)
-	authorized.GET("/sensor/:sensorname/values", sensorValueHandler)
-	authorized.PUT("/sensor/:sensorname", sensorUpdateHandler)
+	//authorized.GET("/:sensorname/values", sensorValueHandler)
+	authorized.GET("/sensor/:sensorname/lastvalue", sensorLastValueHandler)
+	authorized.PUT("/sensor/:sensorname/update", sensorUpdateHandler)
 
 	router.Run()
 }

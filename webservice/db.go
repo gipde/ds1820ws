@@ -63,15 +63,66 @@ func save(bucket string, value float32) {
 	})
 }
 
-func getLastValues(bucket string) (string, float32) {
+/*
+Entry Transfer Object for Temperature Sensor Data
+*/
+type Entry struct {
+	Date  string
+	Value float32
+}
+
+func getBuckets() []string {
+	var buckets []string
+	db.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			buckets = append(buckets, string(name))
+			log.Println(string(name))
+			return nil
+		})
+	})
+	return buckets
+}
+
+func printAllValues(bucket string) {
+	log.Println("All Values --BEGIN--")
+	db.View(func(tx *bolt.Tx) error {
+		b := getOrCreateBucket(bucket, tx)
+		log.Println("Entries: ", countValues(bucket))
+		b.ForEach(func(k []byte, v []byte) error {
+			log.Println(string(k), ":", float32frombytes(v))
+			return nil
+		})
+		return nil
+	})
+	log.Println("All Values --END--")
+}
+
+func getNLastValues(bucket string, count int) []Entry {
+	var elements []Entry
 	var value, date []byte
+
+	entries := countValues(bucket)
+	if count > entries {
+		count = entries
+	}
 
 	db.View(func(tx *bolt.Tx) error {
 		c := getOrCreateBucket(bucket, tx).Cursor()
 		date, value = c.Last()
+		for count > 0 {
+			elements = append(elements, Entry{string(date), float32frombytes(value)})
+			if count > 1 {
+				date, value = c.Prev()
+			}
+			count--
+		}
 		return nil
 	})
-	return string(date), float32frombytes(value)
+	//reversing slice
+	for i, j := 0, len(elements)-1; i < j; i, j = i+1, j-1 {
+		elements[i], elements[j] = elements[j], elements[i]
+	}
+	return elements
 }
 
 func getValuesBetween(bucket, min, max string) map[string]float32 {
@@ -91,13 +142,15 @@ func countValues(bucket string) int {
 	db.View(func(tx *bolt.Tx) error {
 		b := getOrCreateBucket(bucket, tx)
 		retval = b.Stats().KeyN
-		log.Println("count: " + string(retval))
 		return nil
 	})
 	return retval
 }
 
 func float32frombytes(bytes []byte) float32 {
+	if len(bytes) == 0 {
+		return 0.0
+	}
 	bits := binary.LittleEndian.Uint32(bytes)
 	float := math.Float32frombits(bits)
 	return float
