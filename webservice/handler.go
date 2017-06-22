@@ -49,7 +49,6 @@ func sensorUpdateHandler(c *gin.Context) {
 	var j SensorUpdateData
 	name := c.Param("sensorname")
 	if e := c.Bind(&j); e == nil {
-		log.Print("Data")
 		log.Println(j)
 		value, _ := strconv.ParseFloat(j.Value, 32)
 		save(name, float32(value))

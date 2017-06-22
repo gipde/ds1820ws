@@ -40,7 +40,7 @@ func main() {
 	authorized.GET("/sensor/:sensorname/info", sensorInfoHandler)
 	//authorized.GET("/:sensorname/values", sensorValueHandler)
 	authorized.GET("/sensor/:sensorname/lastvalue", sensorLastValueHandler)
-	authorized.PUT("/sensor/:sensorname/update", sensorUpdateHandler)
+	authorized.PUT("/sensor/:sensorname", sensorUpdateHandler)
 
 	router.Run()
 }
