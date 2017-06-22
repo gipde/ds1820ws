@@ -29,9 +29,18 @@ Wäremepumpe ----- Multiple Sensors    ||   Raspberry-Pi    ||     Cloud-Service
 
 
 ## import data with wget
-http_proxy="http://localhost:8080" wget -qO- --user=foo --password=bar --method=PUT --header "Content-Type: application/json" --body-data="{\"Value\":\"1.2\"" "http://localhost:3000/sensor/10-0008019462b6"
+```
+http_proxy="http://localhost:8080" wget -qO- --user=foo 
+  --password=bar --method=PUT --header "Content-Type: application/json" 
+  --body-data="{\"Value\":\"1.2\"" "http://localhost:3000/sensor/10-0008019462b6"
+```
 
 ## use Rest API
-http_proxy="http://localhost:8080" wget -qO- --user=foo --password=bar --method=GET "http://localhost:3000/sensor/10-0008019462b6/values?lastvalue=true"
-
-http_proxy="http://localhost:8080" wget -qO- --user=foo --password=bar --method=GET "http://localhost:3000/sensor/10-0008019462b6/lastvalue?count=2"
+```
+http_proxy="http://localhost:8080" wget -qO- --user=foo --password=bar 
+  --method=GET "http://localhost:3000/sensor/10-0008019462b6/values?lastvalue=true"
+```
+```
+http_proxy="http://localhost:8080" wget -qO- --user=foo --password=bar 
+  --method=GET "http://localhost:3000/sensor/10-0008019462b6/lastvalue?count=2"
+```
