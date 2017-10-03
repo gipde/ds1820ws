@@ -10,6 +10,12 @@ import (
 	"gopkg.in/gin-gonic/gin.v1"
 )
 
+/*
+TODO: 
+- Basic Auth soll bei webanwendung nicht kommen -> müsste dann eigentlich im JS sein, dass sieht aber der Client wieder  
+- REST CAll wo man die values als Liste sieht
+*/
+
 const user = "foo"
 const pass = "bar"
 
@@ -33,8 +39,14 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	//every call needs to be authenticated
+	//Handler for every call -> needs to be authenticated
 	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{user: pass}))
+
+	// Static Router with CORS enabled
+	staticRouter := authorized.Group("/static", func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+	})
+	staticRouter.Static("/", "./static/")
 
 	// get a List of all Sensors
 	authorized.GET("/sensors", sensorsHandler)

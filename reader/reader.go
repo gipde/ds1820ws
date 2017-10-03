@@ -14,6 +14,12 @@ import (
 	"strconv"
 )
 
+/*
+TODO:
+- 1 Request für alle Sensoren
+- passwort muss parametrisierbar sein
+*/
+
 const baseDir = "/sys/bus/w1/devices"
 const user = "foo"
 const pass = "bar"
@@ -22,7 +28,7 @@ var list, transmit *bool
 var hostname *string
 var port *int
 
-// SensorData Temperature
+// SensorUpdateData Temperature
 type SensorUpdateData struct {
 	Value string `json:"value"`
 }
@@ -53,39 +59,54 @@ func readSensorFile(f string) string {
 	re := regexp.MustCompile(".*t=(\\d*)")
 	matches := re.FindStringSubmatch(scanner.Text())
 
-	var retval = "INVALID"
+	var retval string
 
 	if len(matches) == 2 {
 		tempInt, _ := strconv.Atoi(matches[1])
-		retval = strconv.FormatFloat(float64(tempInt)/1000, 'f', 2, 32)
+		temp := float64(tempInt) / 1000
+
+		// if tmp==85.00 usually a read error
+		if temp != 85.00 && temp != 0.00 {
+			retval = strconv.FormatFloat(temp, 'f', 2, 32)
+		}
 	}
 	return retval
 }
 
+func transmitAll(sensors []string) {
+
+}
+
 func doTransmit(name string) {
-	jsonStr, _ := json.Marshal(SensorUpdateData{readSensorFile(name)})
-	log.Printf("Transmitting: %s\n", jsonStr)
-	url := fmt.Sprintf("http://%s:%d/sensor/", *hostname, *port)
-	req, _ := http.NewRequest("PUT", url+name, bytes.NewBuffer(jsonStr))
-	req.SetBasicAuth(user, pass)
-	req.Header.Set("Content-Type", "application/json")
+	temp := readSensorFile(name)
+	if temp != "" {
+		jsonStr, _ := json.Marshal(SensorUpdateData{temp})
+		log.Printf("Transmitting: %s\n", jsonStr)
+		url := fmt.Sprintf("http://%s:%d/sensor/", *hostname, *port)
+		req, _ := http.NewRequest("PUT", url+name, bytes.NewBuffer(jsonStr))
+		req.SetBasicAuth(user, pass)
+		req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.Status != "200 OK" {
+			fmt.Println("response Status:", resp.Status)
+			fmt.Println("response Headers:", resp.Header)
+			body, _ := ioutil.ReadAll(resp.Body)
+			fmt.Println("response Body:", string(body))
+
+			fmt.Println("unexpected Result")
+			os.Exit(1)
+		}
+	} else {
+		log.Printf("Invalid Value read from sensor %s\n", name)
 	}
-	defer resp.Body.Close()
 
-	if resp.Status != "200 OK" {
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println("response Body:", string(body))
-
-		fmt.Println("unexpected Result")
-		os.Exit(1)
-	}
 }
 
 func usage() {

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"encoding/json"
+
 	"gopkg.in/gin-gonic/gin.v1"
 )
 
@@ -61,11 +63,19 @@ func sensorUpdateHandler(c *gin.Context) {
 func sensorLastValueHandler(c *gin.Context) {
 	name := c.Param("sensorname")
 	count := c.Query("count")
+	callback := c.DefaultQuery("callback", "")
+	var r []byte
 	if count != "" {
 		countval, _ := strconv.Atoi(count)
-		c.JSON(http.StatusOK, getNLastValues(name, countval))
+		r, _ = json.Marshal(getNLastValues(name, countval))
 	} else {
-		r := getNLastValues(name, 1)[0]
-		c.JSON(http.StatusOK, r)
+		r, _ = json.Marshal(getNLastValues(name, 1)[0])
 	}
+	if callback == "" {
+		c.Data(http.StatusOK, "application/json", r)
+	} else {
+		jsonp := callback + "(" + string(r) + ");"
+		c.Data(http.StatusOK, "application/json", []byte(jsonp))
+	}
+
 }
