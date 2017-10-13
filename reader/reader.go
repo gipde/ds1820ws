@@ -70,7 +70,7 @@ func readSensorFile(f string) (float64, error) {
 			return temp, nil
 		}
 	}
-	return 0, fmt.Errorf(string("invalid Value " + f + " " + strconv.FormatFloat(temp, 'E', -1, 64)))
+	return 0, fmt.Errorf(fmt.Sprintf("invalid Value: %0.2f", temp))
 }
 
 func addBatchPoint(bp client.BatchPoints, name string) error {
