@@ -46,7 +46,7 @@ func usage() {
 func readSensorFile(f string) (float64, error) {
 	file, err := os.Open(baseDir + "/" + f + "/w1_slave")
 	if err != nil {
-		return 0, fmt.Errorf(string("unable to read sensor"))
+		return 0, fmt.Errorf("unable to read sensor:  %s", err)
 	}
 	defer file.Close()
 
@@ -54,7 +54,7 @@ func readSensorFile(f string) (float64, error) {
 
 	scanner.Scan() // 1. Line
 	if v, _ := regexp.MatchString(".*YES", scanner.Text()); !v {
-		log.Printf("CRC failed")
+		return 0, fmt.Errorf("CRC failed")
 	}
 	scanner.Scan() // 2. Line
 	re := regexp.MustCompile(".*t=(\\d*)")
@@ -67,34 +67,47 @@ func readSensorFile(f string) (float64, error) {
 
 		// if tmp==85.00 usually a read error
 		if temp != 85.00 && temp != 0.00 {
+			log.Printf("sensor %s: %03f", f, temp)
 			return temp, nil
 		}
 	}
-	return 0, fmt.Errorf(fmt.Sprintf("invalid Value at %s %0.2f", f, temp))
+	return 0, fmt.Errorf("invalid Value at %s %0.2f", f, temp)
 }
 
 func addBatchPoint(bp client.BatchPoints, name string) error {
 
-	temp, err := readSensorFile(name)
+	errcount := 3
 
-	if err == nil {
-
-		tags := map[string]string{"sensor": name}
-		fields := map[string]interface{}{"temp": temp}
-
-		pt, err := client.NewPoint("heating", tags, fields, time.Now())
-		if err != nil {
-			return err
+	var err error
+	var temp float64
+	for errcount > 0 {
+		temp, err = readSensorFile(name)
+		if err == nil {
+			break
 		}
-		bp.AddPoint(pt)
-
-		return nil
+		if errcount > 0 {
+			log.Printf("error reading %s, next try (%s)", name, err)
+		}
+		errcount--
 	}
-	return err
+	if errcount == 0 {
+		return fmt.Errorf("we give up, to many errors in reading %s: %s", name, err)
+	}
+
+	tags := map[string]string{"sensor": name}
+	fields := map[string]interface{}{"temp": temp}
+
+	pt, err := client.NewPoint("heating", tags, fields, time.Now())
+	if err != nil {
+		return err
+	}
+	bp.AddPoint(pt)
+
+	return nil
 
 }
 
-func transmitSensorData(sensors []string) error {
+func transmitSensorData(sensors *[]string) error {
 	// create influx client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     fmt.Sprintf("http://%s:%d", *hostname, *port),
@@ -117,7 +130,7 @@ func transmitSensorData(sensors []string) error {
 
 	// add points
 	sensorValues := 0
-	for _, n := range sensors {
+	for _, n := range *sensors {
 		if err := addBatchPoint(bp, n); err == nil {
 			sensorValues++
 		} else {
@@ -151,6 +164,34 @@ func main() {
 
 	log.Println("Starting...")
 
+	if *list {
+		detectSensors()
+		os.Exit(0)
+	}
+
+	// transfer loop
+	for {
+		err := transmitSensorData(detectSensors())
+		if err != nil {
+			log.Printf(err.Error())
+		}
+
+		if (*delay) < 1 {
+			os.Exit(0)
+		}
+		time.Sleep(time.Second * time.Duration(*delay))
+	}
+
+}
+
+func listSensors(sensors *[]string) {
+	fmt.Println("we have detected the following sensors:")
+	for _, n := range *sensors {
+		fmt.Println(n)
+	}
+}
+
+func detectSensors() *[]string {
 	sensorDirs, err := ioutil.ReadDir(baseDir)
 	if err != nil {
 		log.Fatal("Kann nicht vom Directory lesen: " + err.Error())
@@ -162,25 +203,6 @@ func main() {
 			sensors = append(sensors, f.Name())
 		}
 	}
-
-	if *list {
-		for _, n := range sensors {
-			fmt.Println(n)
-		}
-		os.Exit(0)
-	}
-
-	// transfer loop
-	for {
-		err := transmitSensorData(sensors)
-		if err != nil {
-			log.Printf(err.Error())
-		}
-
-		if (*delay) < 1 {
-			os.Exit(0)
-		}
-		time.Sleep(time.Second * time.Duration(*delay))
-	}
-
+	listSensors(&sensors)
+	return &sensors
 }
