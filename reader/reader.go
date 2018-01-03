@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/influxdata/influxdb/client/v2"
 	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 const (
@@ -134,7 +135,7 @@ func transmitSensorData(sensors *[]string) error {
 		if err := addBatchPoint(bp, n); err == nil {
 			sensorValues++
 		} else {
-			return err
+			log.Printf("Error: %s", err)
 		}
 	}
 
